@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>category</key>
+	<string></string>
+	<key>command</key>
+	<string>#!/usr/bin/env php
+&lt;?php
+
+$data = file("php://stdin");
+$columns = array_map('trim', array_slice(explode("\t", array_shift($data)), 1));
+$series = array();
+foreach (array_reverse($data) as $line) {
+	$record = array_map('trim', explode("\t", $line));
+	foreach ($record as $idx =&gt; $value) {
+		$series[$idx][] = $value;
+	}
+}
+
+$data = array (
+	'labels' =&gt; array_shift($series),
+	'series' =&gt; $series,
+	'columns' =&gt; $columns,
+);
+
+?&gt;&lt;!doctype html&gt;
+&lt;html lang="en"&gt;&lt;head&gt;&lt;title&gt;&lt;/title&gt;
+&lt;style type="text/css"&gt;html,body,#wrapper{width:100%;height:100%;overflow:hidden;}#wrapper{padding:20px;box-sizing:border-box;}svg{width:100%;height:100%;box-sizing:border-box;}&lt;/style&gt;
+&lt;script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.7.0/nv.d3.min.js"&gt;&lt;/script&gt;
+&lt;link rel=stylesheet href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.7.0/nv.d3.min.css"/&gt;
+&lt;/head&gt;&lt;body&gt;&lt;div id="wrapper"&gt;&lt;svg id="chart"&gt;&lt;/svg&gt;&lt;/div&gt;
+&lt;script type="text/javascript"&gt;
+var input = &lt;?=json_encode($data, JSON_PRETTY_PRINT)?&gt;,
+	labels = input.labels, columns = input.columns, series = input.series;
+
+if (/\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?/.test(labels[0])) {
+	labels = labels.map(function (date) { return (new Date(date)).valueOf(); }); // convert to seconds
+}
+	
+var data = series.map(function (dataset, seriesIdx) {
+	return {
+		"key": columns[seriesIdx],
+		"area": true,
+		"values": dataset.map(function (value, idx) { return [labels[idx], value]; }) 
+	};
+});
+
+Array.prototype.max = function() {
+	return Math.max.apply(null, this);
+};
+
+Array.prototype.min = function() {
+	return Math.min.apply(null, this);
+};
+
+var max = series.map(function(dataset) { return dataset.max(); }).max(),
+	min = series.map(function(dataset) { return dataset.min(); }).min();
+
+nv.addGraph(function() {
+	var chart = nv.models.lineChart()
+		.x(function(d) { return d[0] })
+		.y(function(d) { return d[1] })
+		.color(d3.scale.category10().range())
+		.useInteractiveGuideline(true);
+
+	chart.xAxis.tickFormat(function(d) {
+		return d3.time.format('%Y-%m-%d')(new Date(d))
+	});
+
+	chart.yAxis.tickFormat(d3.format(',f'));
+	chart.yDomain([min, max*1.1]);
+
+	d3.select('svg').datum(data).transition().duration(500).call(chart);
+
+	nv.utils.windowResize(chart.update);
+
+	return chart;
+});
+&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;</string>
+	<key>input</key>
+	<string>selectedtablerowsastab</string>
+	<key>internalKeyEquivalent</key>
+	<dict>
+		<key>characters</key>
+		<string>P</string>
+		<key>keyCode</key>
+		<integer>35</integer>
+		<key>modifierFlags</key>
+		<integer>262144</integer>
+	</dict>
+	<key>keyEquivalent</key>
+	<string>^p</string>
+	<key>name</key>
+	<string>Plot</string>
+	<key>output</key>
+	<string>showashtml</string>
+	<key>scope</key>
+	<string>datatable</string>
+	<key>uuid</key>
+	<string>A87C58E8-CE20-4466-BE66-4ECD9C047A19</string>
+</dict>
+</plist>
